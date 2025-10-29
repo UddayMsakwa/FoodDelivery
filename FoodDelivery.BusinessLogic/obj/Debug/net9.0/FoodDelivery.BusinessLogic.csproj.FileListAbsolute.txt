@@ -1,0 +1,15 @@
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\bin\Debug\net9.0\FoodDelivery.BusinessLogic.deps.json
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\bin\Debug\net9.0\FoodDelivery.BusinessLogic.dll
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\bin\Debug\net9.0\FoodDelivery.BusinessLogic.pdb
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\bin\Debug\net9.0\FoodDelivery.DataAccess.dll
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\bin\Debug\net9.0\FoodDelivery.DataAccess.pdb
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.csproj.AssemblyReference.cache
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.AssemblyInfoInputs.cache
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.AssemblyInfo.cs
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.csproj.CoreCompileInputs.cache
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDeli.99C31A9C.Up2Date
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.dll
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\refint\FoodDelivery.BusinessLogic.dll
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\FoodDelivery.BusinessLogic.pdb
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.BusinessLogic\obj\Debug\net9.0\ref\FoodDelivery.BusinessLogic.dll

@@ -8,8 +8,19 @@ namespace FoodDelivery.DataAccess
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
-        public DbSet<User> Users => Set<User>();
-        public DbSet<Dish> Dishes => Set<Dish>();
-        public DbSet<DishCategory> DishCategories => Set<DishCategory>();
+        public DbSet<User> Users { get; set; }
+        public DbSet<Dish> Dishes { get; set; }
+        public DbSet<DishCategory> DishCategories { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Dish>()
+                .HasOne(d => d.Category)
+                .WithMany(c => c.Dishes)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }

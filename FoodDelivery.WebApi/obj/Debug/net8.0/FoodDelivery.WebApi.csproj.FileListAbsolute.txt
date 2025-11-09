@@ -103,6 +103,7 @@ C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\FoodDeli
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\FoodDelivery.WebApi.csproj.CoreCompileInputs.cache
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\FoodDelivery.WebApi.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\FoodDelivery.WebApi.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\FoodDelivery.WebApi.sourcelink.json
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\scopedcss\bundle\FoodDelivery.WebApi.styles.css
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net8.0\staticwebassets.development.json

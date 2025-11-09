@@ -7,6 +7,7 @@ C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\Food
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.AssemblyInfoInputs.cache
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.AssemblyInfo.cs
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.csproj.CoreCompileInputs.cache
+C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.sourcelink.json
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.dll
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\refint\FoodDelivery.DataAccess.dll
 C:\Users\udday\FoodDeliveryBackend\FoodDelivery.DataAccess\obj\Debug\net8.0\FoodDelivery.DataAccess.pdb

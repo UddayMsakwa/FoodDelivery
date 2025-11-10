@@ -3,6 +3,10 @@ using FoodDelivery.BusinessLogic.Interfaces;
 using FoodDelivery.DataAccess;
 using FoodDelivery.DataAccess.Entities;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace FoodDelivery.BusinessLogic.Services
 {
@@ -17,32 +21,36 @@ namespace FoodDelivery.BusinessLogic.Services
 
         public async Task<RatingResponseDto> AddRatingAsync(Guid userId, RatingDto dto)
         {
-            // Check if user ordered this dish
-            bool ordered = await _context.OrderItems
-                .Include(oi => oi.Order)
-                .AnyAsync(oi => oi.Order.UserId == userId && oi.DishId == dto.DishId);
+            var existing = await _context.Ratings
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.DishId == dto.DishId);
 
-            if (!ordered)
-                throw new Exception("User cannot rate a dish they haven't ordered.");
+            if (existing != null)
+                throw new InvalidOperationException("User has already rated this dish.");
+
+            var hasOrdered = await _context.OrderItems
+                .AnyAsync(oi => oi.DishId == dto.DishId && oi.Order.UserId == userId);
+
+            if (!hasOrdered)
+                throw new InvalidOperationException("User can only rate dishes they have ordered.");
 
             var rating = new Rating
             {
                 Id = Guid.NewGuid(),
-                UserId = userId,
                 DishId = dto.DishId,
+                UserId = userId,
                 Score = dto.Score,
-                Comment = dto.Comment
+                Comment = dto.Comment,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Ratings.Add(rating);
             await _context.SaveChangesAsync();
 
-            var dish = await _context.Dishes.FindAsync(dto.DishId);
-
             return new RatingResponseDto
             {
                 Id = rating.Id,
-                DishName = dish?.Name ?? "Unknown",
+                DishId = rating.DishId,
+                UserId = rating.UserId,
                 Score = rating.Score,
                 Comment = rating.Comment,
                 CreatedAt = rating.CreatedAt
@@ -52,12 +60,13 @@ namespace FoodDelivery.BusinessLogic.Services
         public async Task<IEnumerable<RatingResponseDto>> GetDishRatingsAsync(Guid dishId)
         {
             return await _context.Ratings
-                .Include(r => r.Dish)
                 .Where(r => r.DishId == dishId)
+                .OrderByDescending(r => r.CreatedAt)
                 .Select(r => new RatingResponseDto
                 {
                     Id = r.Id,
-                    DishName = r.Dish.Name,
+                    DishId = r.DishId,
+                    UserId = r.UserId,
                     Score = r.Score,
                     Comment = r.Comment,
                     CreatedAt = r.CreatedAt
@@ -67,12 +76,9 @@ namespace FoodDelivery.BusinessLogic.Services
 
         public async Task<double> GetAverageRatingAsync(Guid dishId)
         {
-            if (!await _context.Ratings.AnyAsync(r => r.DishId == dishId))
-                return 0;
-
             return await _context.Ratings
                 .Where(r => r.DishId == dishId)
-                .AverageAsync(r => (double)r.Score);
+                .AverageAsync(r => (double?)r.Score) ?? 0.0;
         }
     }
 }

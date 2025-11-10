@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
-using FoodDelivery.BusinessLogic.DTOs;
+﻿using FoodDelivery.DataAccess.Entities;
+using FoodDelivery.BusinessLogic.DTOs.Auth;
 
 namespace FoodDelivery.BusinessLogic.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthResponse> RegisterAsync(RegisterRequest request);
-        Task<AuthResponse> LoginAsync(LoginRequest request);
+        Task<User> RegisterAsync(RegisterRequest request);
+        Task<string> LoginAsync(LoginRequest request);
     }
 }

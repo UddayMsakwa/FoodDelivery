@@ -9,47 +9,77 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// =======================================================
+// DATABASE CONFIGURATION
+// =======================================================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// JWT
+// =======================================================
+// JWT AUTHENTICATION CONFIGURATION
+// =======================================================
 var jwt = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwt["Key"]!);
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o =>
+var keyBytes = Encoding.UTF8.GetBytes(jwt["Key"]!);
+
+builder.Services
+    .AddAuthentication(options =>
     {
-        o.TokenValidationParameters = new TokenValidationParameters
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwt["Issuer"],
             ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        // Diagnostic logging during development
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = ctx =>
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[JWT ERROR] {ctx.Exception.Message}");
+                Console.ResetColor();
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = ctx =>
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[JWT VALIDATED]");
+                Console.ResetColor();
+                return Task.CompletedTask;
+            }
         };
     });
 
-// Services (Dependency Injection)
+builder.Services.AddAuthorization();
+
+// =======================================================
+// DEPENDENCY INJECTION
+// =======================================================
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDishService, DishService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IRatingService, RatingService>();
 builder.Services.AddScoped<IDishCategoryService, DishCategoryService>();
-builder.Services.AddScoped<IDishService, DishService>();
-
-
-
-
-
-
-
-
 
 builder.Services.AddControllers();
 
-// Swagger setup with JWT support
+// =======================================================
+// SWAGGER CONFIGURATION (WITH JWT SUPPORT)
+// =======================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -57,7 +87,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Food Delivery API",
         Version = "v1",
-        Description = "API for Food Delivery Backend (Day 1–2 Project)"
+        Description = "Backend API for the Food Delivery project"
     });
 
     var jwtSecurityScheme = new OpenApiSecurityScheme
@@ -67,8 +97,7 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
-        Description = "Input your JWT token in this format: Bearer {your token}",
-
+        Description = "Enter your JWT token here (example: Bearer {token})",
         Reference = new OpenApiReference
         {
             Id = JwtBearerDefaults.AuthenticationScheme,
@@ -77,15 +106,40 @@ builder.Services.AddSwaggerGen(options =>
     };
 
     options.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
-
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         { jwtSecurityScheme, Array.Empty<string>() }
     });
 });
 
+// =======================================================
+// BUILD & RUN
+// =======================================================
 var app = builder.Build();
 
+// =======================================================
+// GLOBAL EXCEPTION LOGGER (for debugging)
+// =======================================================
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine("[UNHANDLED ERROR]");
+        Console.WriteLine($"Message: {ex.Message}");
+        Console.WriteLine($"StackTrace: {ex.StackTrace}");
+        Console.ResetColor();
+        throw;
+    }
+});
+
+// =======================================================
+// PIPELINE
+// =======================================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -95,6 +149,5 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.Run();
 
-//test1
+app.Run();

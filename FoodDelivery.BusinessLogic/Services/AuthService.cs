@@ -1,15 +1,13 @@
-﻿using System;
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using FoodDelivery.BusinessLogic.DTOs;
+﻿using FoodDelivery.BusinessLogic.DTOs.Auth;
 using FoodDelivery.BusinessLogic.Interfaces;
 using FoodDelivery.DataAccess;
 using FoodDelivery.DataAccess.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace FoodDelivery.BusinessLogic.Services
 {
@@ -17,77 +15,74 @@ namespace FoodDelivery.BusinessLogic.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
+
         public AuthService(ApplicationDbContext context, IConfiguration config)
         {
             _context = context;
             _config = config;
         }
 
-        // ✅ Register a new user
-        public async Task<AuthResponse> RegisterAsync(RegisterRequest req)
+        // =========================
+        // REGISTER USER
+        // =========================
+        public async Task<User> RegisterAsync(RegisterRequest request)
         {
-            try
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                throw new InvalidOperationException("User with this email already exists.");
+
+            var user = new User
             {
-                // Check if email already exists
-                if (await _context.Users.AnyAsync(u => u.Email == req.Email))
-                    throw new Exception("User already exists");
+                Id = Guid.NewGuid(),
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Name = request.Name,
+                BirthDate = request.BirthDate,
+                Address = request.Address,
+                Phone = request.Phone
+            };
 
-                // Create new user entity
-                var user = new User
-                {
-                    Id = Guid.NewGuid(),
-                    Email = req.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-                    Name = req.Name,
-                    BirthDate = req.BirthDate?.ToUniversalTime(),
-                    Address = req.Address,
-                    Phone = req.Phone
-                };
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
 
-
-                // Add and save
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                // Return JWT token
-                return new AuthResponse { Token = GenerateJwtToken(user) };
-            }
-            catch (Exception ex)
-            {
-                var inner = ex.InnerException?.Message ?? ex.Message;
-                throw new Exception($"Registration failed → {inner}");
-            }
+            return user;
         }
 
-        // ✅ Login existing user
-        public async Task<AuthResponse> LoginAsync(LoginRequest req)
+        // =========================
+        // LOGIN USER
+        // =========================
+        public async Task<string> LoginAsync(LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == req.Email)
-                       ?? throw new Exception("Invalid credentials");
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+                throw new UnauthorizedAccessException("Invalid credentials.");
 
-            if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
-                throw new Exception("Invalid credentials");
-
-            return new AuthResponse { Token = GenerateJwtToken(user) };
+            return GenerateJwtToken(user);
         }
 
-        // ✅ JWT token generator
+        // =========================
+        // TOKEN GENERATION
+        // =========================
         private string GenerateJwtToken(User user)
         {
-            var jwt = _config.GetSection("Jwt");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email)
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.Name ?? string.Empty)
             };
+
             var token = new JwtSecurityToken(
-                issuer: jwt["Issuer"],
-                audience: jwt["Audience"],
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: creds);
+                notBefore: DateTime.UtcNow,
+                expires: DateTime.UtcNow.AddHours(24),
+                signingCredentials: creds
+            );
+
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }

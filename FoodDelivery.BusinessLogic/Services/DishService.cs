@@ -3,10 +3,6 @@ using FoodDelivery.BusinessLogic.Interfaces;
 using FoodDelivery.DataAccess;
 using FoodDelivery.DataAccess.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace FoodDelivery.BusinessLogic.Services
 {
@@ -19,24 +15,42 @@ namespace FoodDelivery.BusinessLogic.Services
             _context = context;
         }
 
-        public async Task<(IEnumerable<DishDto> Items, int Total)> GetAllAsync(string[]? categories, bool? vegetarianOnly, int? sortBy, int page, int pageSize)
+        public async Task<(IEnumerable<DishDto> Items, int Total)> GetAllAsync(
+            string[]? categories,
+            bool? vegetarianOnly,
+            int? sortBy,
+            int page,
+            int pageSize)
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
             var query = _context.Dishes
+                .AsNoTracking()
                 .Include(d => d.DishCategory)
                 .AsQueryable();
 
-            if (categories != null && categories.Length > 0)
-                query = query.Where(d => categories.Contains(d.DishCategory.Name));
+            // Filter by category names only if a non-empty array is provided
+            if (categories is { Length: > 0 })
+            {
+                // Normalize (trim + case-insensitive)
+                var norm = categories
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim().ToLower())
+                    .ToArray();
 
-            if (vegetarianOnly.HasValue && vegetarianOnly.Value)
+                if (norm.Length > 0)
+                    query = query.Where(d => norm.Contains(d.DishCategory.Name.ToLower()));
+            }
+
+            if (vegetarianOnly == true)
                 query = query.Where(d => d.IsVegetarian);
 
-            // Sorting: 1 = Name ASC, 2 = Price ASC, 3 = Price DESC
+            // sortBy: 0/NULL = by name asc, 1 = price asc, 2 = price desc
             query = sortBy switch
             {
-                1 => query.OrderBy(d => d.Name),
-                2 => query.OrderBy(d => d.Price),
-                3 => query.OrderByDescending(d => d.Price),
+                1 => query.OrderBy(d => d.Price).ThenBy(d => d.Name),
+                2 => query.OrderByDescending(d => d.Price).ThenBy(d => d.Name),
                 _ => query.OrderBy(d => d.Name)
             };
 
@@ -64,11 +78,11 @@ namespace FoodDelivery.BusinessLogic.Services
         public async Task<DishDto?> GetByIdAsync(Guid id)
         {
             var dish = await _context.Dishes
+                .AsNoTracking()
                 .Include(d => d.DishCategory)
                 .FirstOrDefaultAsync(d => d.Id == id);
 
-            if (dish == null)
-                return null;
+            if (dish is null) return null;
 
             return new DishDto
             {
@@ -85,6 +99,13 @@ namespace FoodDelivery.BusinessLogic.Services
 
         public async Task<DishDto> CreateAsync(CreateDishDto dto)
         {
+            // Validate FK exists
+            var categoryExists = await _context.DishCategories
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == dto.DishCategoryId);
+            if (!categoryExists)
+                throw new ArgumentException("DishCategoryId does not exist.");
+
             var entity = new Dish
             {
                 Id = Guid.NewGuid(),
@@ -99,7 +120,9 @@ namespace FoodDelivery.BusinessLogic.Services
             _context.Dishes.Add(entity);
             await _context.SaveChangesAsync();
 
-            var category = await _context.DishCategories.FindAsync(dto.DishCategoryId);
+            var category = await _context.DishCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == entity.DishCategoryId);
 
             return new DishDto
             {
@@ -110,45 +133,52 @@ namespace FoodDelivery.BusinessLogic.Services
                 Image = entity.Image,
                 IsVegetarian = entity.IsVegetarian,
                 DishCategoryId = entity.DishCategoryId,
-                CategoryName = category?.Name ?? string.Empty
+                CategoryName = category?.Name ?? "Unknown"
             };
         }
 
         public async Task<DishDto> UpdateAsync(Guid id, CreateDishDto dto)
         {
-            var dish = await _context.Dishes.FindAsync(id);
-            if (dish == null)
-                throw new KeyNotFoundException("Dish not found");
+            var entity = await _context.Dishes.FirstOrDefaultAsync(d => d.Id == id);
+            if (entity is null) throw new KeyNotFoundException("Dish not found.");
 
-            dish.Name = dto.Name;
-            dish.Description = dto.Description;
-            dish.Price = dto.Price;
-            dish.Image = dto.Image;
-            dish.IsVegetarian = dto.IsVegetarian;
-            dish.DishCategoryId = dto.DishCategoryId;
+            // Validate FK exists
+            var categoryExists = await _context.DishCategories
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == dto.DishCategoryId);
+            if (!categoryExists)
+                throw new ArgumentException("DishCategoryId does not exist.");
+
+            entity.Name = dto.Name;
+            entity.Description = dto.Description;
+            entity.Price = dto.Price;
+            entity.Image = dto.Image;
+            entity.IsVegetarian = dto.IsVegetarian;
+            entity.DishCategoryId = dto.DishCategoryId;
 
             await _context.SaveChangesAsync();
 
-            var category = await _context.DishCategories.FindAsync(dto.DishCategoryId);
+            var category = await _context.DishCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == entity.DishCategoryId);
 
             return new DishDto
             {
-                Id = dish.Id,
-                Name = dish.Name,
-                Description = dish.Description,
-                Price = dish.Price,
-                Image = dish.Image,
-                IsVegetarian = dish.IsVegetarian,
-                DishCategoryId = dish.DishCategoryId,
-                CategoryName = category?.Name ?? string.Empty
+                Id = entity.Id,
+                Name = entity.Name,
+                Description = entity.Description,
+                Price = entity.Price,
+                Image = entity.Image,
+                IsVegetarian = entity.IsVegetarian,
+                DishCategoryId = entity.DishCategoryId,
+                CategoryName = category?.Name ?? "Unknown"
             };
         }
 
         public async Task DeleteAsync(Guid id)
         {
-            var dish = await _context.Dishes.FindAsync(id);
-            if (dish == null)
-                throw new KeyNotFoundException("Dish not found");
+            var dish = await _context.Dishes.FirstOrDefaultAsync(d => d.Id == id);
+            if (dish is null) throw new KeyNotFoundException("Dish not found.");
 
             _context.Dishes.Remove(dish);
             await _context.SaveChangesAsync();

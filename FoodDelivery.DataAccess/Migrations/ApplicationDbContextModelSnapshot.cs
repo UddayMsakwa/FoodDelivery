@@ -25,31 +25,32 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Dish", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DishCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsVegetarian")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("DishCategoryId");
 
                     b.ToTable("Dishes");
                 });
@@ -57,13 +58,11 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.DishCategory", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -73,7 +72,6 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("OrderDate")
@@ -125,7 +123,6 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Rating", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Comment")
@@ -144,11 +141,16 @@ namespace FoodDelivery.DataAccess.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DishId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1");
 
                     b.ToTable("Ratings");
                 });
@@ -170,6 +172,7 @@ namespace FoodDelivery.DataAccess.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
@@ -186,19 +189,19 @@ namespace FoodDelivery.DataAccess.Migrations
 
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Dish", b =>
                 {
-                    b.HasOne("FoodDelivery.DataAccess.Entities.DishCategory", "Category")
+                    b.HasOne("FoodDelivery.DataAccess.Entities.DishCategory", "DishCategory")
                         .WithMany("Dishes")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("DishCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Category");
+                    b.Navigation("DishCategory");
                 });
 
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Order", b =>
                 {
                     b.HasOne("FoodDelivery.DataAccess.Entities.User", "User")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -209,7 +212,7 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.OrderItem", b =>
                 {
                     b.HasOne("FoodDelivery.DataAccess.Entities.Dish", "Dish")
-                        .WithMany()
+                        .WithMany("OrderItems")
                         .HasForeignKey("DishId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -228,7 +231,7 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Rating", b =>
                 {
                     b.HasOne("FoodDelivery.DataAccess.Entities.Dish", "Dish")
-                        .WithMany()
+                        .WithMany("Ratings")
                         .HasForeignKey("DishId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -239,9 +242,20 @@ namespace FoodDelivery.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FoodDelivery.DataAccess.Entities.User", null)
+                        .WithMany("Ratings")
+                        .HasForeignKey("UserId1");
+
                     b.Navigation("Dish");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Dish", b =>
+                {
+                    b.Navigation("OrderItems");
+
+                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.DishCategory", b =>
@@ -252,6 +266,13 @@ namespace FoodDelivery.DataAccess.Migrations
             modelBuilder.Entity("FoodDelivery.DataAccess.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("FoodDelivery.DataAccess.Entities.User", b =>
+                {
+                    b.Navigation("Orders");
+
+                    b.Navigation("Ratings");
                 });
 #pragma warning restore 612, 618
         }

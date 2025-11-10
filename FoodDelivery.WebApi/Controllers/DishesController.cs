@@ -1,9 +1,7 @@
-﻿using FoodDelivery.BusinessLogic.DTOs;
-using FoodDelivery.BusinessLogic.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
+using FoodDelivery.BusinessLogic.DTOs;
+using FoodDelivery.BusinessLogic.Interfaces;
 
 namespace FoodDelivery.WebApi.Controllers
 {
@@ -18,6 +16,9 @@ namespace FoodDelivery.WebApi.Controllers
             _dishService = dishService;
         }
 
+        // ===========================
+        // GET /api/dishes
+        // ===========================
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string[]? categories,
@@ -26,36 +27,60 @@ namespace FoodDelivery.WebApi.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            var (items, total) = await _dishService.GetAllAsync(categories, vegetarianOnly, sortBy, page, pageSize);
-            return Ok(new { total, items });
+            var result = await _dishService.GetAllAsync(categories, vegetarianOnly, sortBy, page, pageSize);
+            return Ok(new
+            {
+                total = result.Total,
+                items = result.Items
+            });
         }
 
-        [HttpGet("{id:guid}")]
+        // ===========================
+        // GET /api/dishes/{id}
+        // ===========================
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var dish = await _dishService.GetByIdAsync(id);
-            if (dish == null) return NotFound();
+            if (dish == null)
+                return NotFound(new { message = "Dish not found." });
+
             return Ok(dish);
         }
 
-        [Authorize(Roles = "Admin")]
+        // ===========================
+        // POST /api/dishes
+        // ===========================
+        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Create(CreateDishDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateDishDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var created = await _dishService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            return Ok(created);
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, CreateDishDto dto)
+        // ===========================
+        // PUT /api/dishes/{id}
+        // ===========================
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] CreateDishDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var updated = await _dishService.UpdateAsync(id, dto);
             return Ok(updated);
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpDelete("{id:guid}")]
+        // ===========================
+        // DELETE /api/dishes/{id}
+        // ===========================
+        [Authorize]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             await _dishService.DeleteAsync(id);

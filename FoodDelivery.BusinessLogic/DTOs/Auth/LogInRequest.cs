@@ -1,4 +1,4 @@
-﻿namespace FoodDelivery.BusinessLogic.DTOs
+﻿namespace FoodDelivery.BusinessLogic.DTOs.Auth
 {
     public class LoginRequest
     {

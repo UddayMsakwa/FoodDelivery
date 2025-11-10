@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 
-namespace FoodDelivery.DataAccess.Entities
+namespace FoodDelivery.BusinessLogic.DTOs
 {
-    public class Dish
+    public class DishDto
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -11,11 +10,7 @@ namespace FoodDelivery.DataAccess.Entities
         public decimal Price { get; set; }
         public string Image { get; set; } = string.Empty;
         public bool IsVegetarian { get; set; }
-
         public Guid DishCategoryId { get; set; }
-        public DishCategory DishCategory { get; set; } = null!;
-
-        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-        public ICollection<Rating> Ratings { get; set; } = new List<Rating>();
+        public string CategoryName { get; set; } = string.Empty;
     }
 }

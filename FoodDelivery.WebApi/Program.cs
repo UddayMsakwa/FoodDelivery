@@ -36,6 +36,13 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDishService, DishService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IRatingService, RatingService>();
+builder.Services.AddScoped<IDishCategoryService, DishCategoryService>();
+builder.Services.AddScoped<IDishService, DishService>();
+
+
+
+
+
 
 
 

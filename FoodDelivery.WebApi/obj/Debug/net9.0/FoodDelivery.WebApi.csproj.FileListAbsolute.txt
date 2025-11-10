@@ -1,7 +1,0 @@
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.csproj.AssemblyReference.cache
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.AssemblyInfoInputs.cache
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.AssemblyInfo.cs
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.csproj.CoreCompileInputs.cache
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.MvcApplicationPartsAssemblyInfo.cs
-C:\Users\udday\FoodDeliveryBackend\FoodDelivery.WebApi\obj\Debug\net9.0\FoodDelivery.WebApi.MvcApplicationPartsAssemblyInfo.cache

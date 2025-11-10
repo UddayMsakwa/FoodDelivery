@@ -1,8 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using FoodDelivery.BusinessLogic.DTOs;
 using FoodDelivery.BusinessLogic.Interfaces;
-using FoodDelivery.DataAccess.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace FoodDelivery.WebApi.Controllers
 {
@@ -18,17 +19,18 @@ namespace FoodDelivery.WebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string[] categories,
-                                                [FromQuery] bool? vegetarianOnly,
-                                                [FromQuery] int? sortBy,
-                                                [FromQuery] int page = 1,
-                                                [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] string[]? categories,
+            [FromQuery] bool? vegetarianOnly,
+            [FromQuery] int? sortBy,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var dishes = await _dishService.GetAllAsync(categories, vegetarianOnly, sortBy, page, pageSize);
-            return Ok(new { total = dishes.Count(), items = dishes });
+            var (items, total) = await _dishService.GetAllAsync(categories, vegetarianOnly, sortBy, page, pageSize);
+            return Ok(new { total, items });
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var dish = await _dishService.GetByIdAsync(id);
@@ -36,26 +38,27 @@ namespace FoodDelivery.WebApi.Controllers
             return Ok(dish);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Dish dish)
+        public async Task<IActionResult> Create(CreateDishDto dto)
         {
-            var result = await _dishService.CreateAsync(dish);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            var created = await _dishService.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Dish dish)
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, CreateDishDto dto)
         {
-            var result = await _dishService.UpdateAsync(id, dish);
-            if (result == null) return NotFound();
-            return Ok(result);
+            var updated = await _dishService.UpdateAsync(id, dto);
+            return Ok(updated);
         }
 
-        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var success = await _dishService.DeleteAsync(id);
-            if (!success) return NotFound();
+            await _dishService.DeleteAsync(id);
             return NoContent();
         }
     }

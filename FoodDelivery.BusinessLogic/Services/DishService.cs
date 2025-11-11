@@ -15,6 +15,9 @@ namespace FoodDelivery.BusinessLogic.Services
             _context = context;
         }
 
+        // ============================================================
+        // GET ALL DISHES (with filters, sorting, pagination)
+        // ============================================================
         public async Task<(IEnumerable<DishDto> Items, int Total)> GetAllAsync(
             string[]? categories,
             bool? vegetarianOnly,
@@ -30,10 +33,9 @@ namespace FoodDelivery.BusinessLogic.Services
                 .Include(d => d.DishCategory)
                 .AsQueryable();
 
-            // Filter by category names only if a non-empty array is provided
+            // Filter by category names if provided
             if (categories is { Length: > 0 })
             {
-                // Normalize (trim + case-insensitive)
                 var norm = categories
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Select(s => s.Trim().ToLower())
@@ -56,6 +58,7 @@ namespace FoodDelivery.BusinessLogic.Services
 
             var total = await query.CountAsync();
 
+            // ✅ Fixed projection here
             var items = await query
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -68,13 +71,16 @@ namespace FoodDelivery.BusinessLogic.Services
                     Image = d.Image,
                     IsVegetarian = d.IsVegetarian,
                     DishCategoryId = d.DishCategoryId,
-                    CategoryName = d.DishCategory.Name
+                    DishCategoryName = d.DishCategory.Name
                 })
                 .ToListAsync();
 
             return (items, total);
         }
 
+        // ============================================================
+        // GET DISH BY ID
+        // ============================================================
         public async Task<DishDto?> GetByIdAsync(Guid id)
         {
             var dish = await _context.Dishes
@@ -93,17 +99,20 @@ namespace FoodDelivery.BusinessLogic.Services
                 Image = dish.Image,
                 IsVegetarian = dish.IsVegetarian,
                 DishCategoryId = dish.DishCategoryId,
-                CategoryName = dish.DishCategory.Name
+                DishCategoryName = dish.DishCategory.Name
             };
         }
 
+        // ============================================================
+        // CREATE NEW DISH
+        // ============================================================
         public async Task<DishDto> CreateAsync(CreateDishDto dto)
         {
-            // Validate FK exists
-            var categoryExists = await _context.DishCategories
+            var category = await _context.DishCategories
                 .AsNoTracking()
-                .AnyAsync(c => c.Id == dto.DishCategoryId);
-            if (!categoryExists)
+                .FirstOrDefaultAsync(c => c.Id == dto.DishCategoryId);
+
+            if (category == null)
                 throw new ArgumentException("DishCategoryId does not exist.");
 
             var entity = new Dish
@@ -120,10 +129,6 @@ namespace FoodDelivery.BusinessLogic.Services
             _context.Dishes.Add(entity);
             await _context.SaveChangesAsync();
 
-            var category = await _context.DishCategories
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == entity.DishCategoryId);
-
             return new DishDto
             {
                 Id = entity.Id,
@@ -133,20 +138,24 @@ namespace FoodDelivery.BusinessLogic.Services
                 Image = entity.Image,
                 IsVegetarian = entity.IsVegetarian,
                 DishCategoryId = entity.DishCategoryId,
-                CategoryName = category?.Name ?? "Unknown"
+                DishCategoryName = category.Name
             };
         }
 
+        // ============================================================
+        // UPDATE DISH
+        // ============================================================
         public async Task<DishDto> UpdateAsync(Guid id, CreateDishDto dto)
         {
             var entity = await _context.Dishes.FirstOrDefaultAsync(d => d.Id == id);
-            if (entity is null) throw new KeyNotFoundException("Dish not found.");
+            if (entity is null)
+                throw new KeyNotFoundException("Dish not found.");
 
-            // Validate FK exists
-            var categoryExists = await _context.DishCategories
+            var category = await _context.DishCategories
                 .AsNoTracking()
-                .AnyAsync(c => c.Id == dto.DishCategoryId);
-            if (!categoryExists)
+                .FirstOrDefaultAsync(c => c.Id == dto.DishCategoryId);
+
+            if (category == null)
                 throw new ArgumentException("DishCategoryId does not exist.");
 
             entity.Name = dto.Name;
@@ -158,10 +167,6 @@ namespace FoodDelivery.BusinessLogic.Services
 
             await _context.SaveChangesAsync();
 
-            var category = await _context.DishCategories
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == entity.DishCategoryId);
-
             return new DishDto
             {
                 Id = entity.Id,
@@ -171,14 +176,18 @@ namespace FoodDelivery.BusinessLogic.Services
                 Image = entity.Image,
                 IsVegetarian = entity.IsVegetarian,
                 DishCategoryId = entity.DishCategoryId,
-                CategoryName = category?.Name ?? "Unknown"
+                DishCategoryName = category.Name
             };
         }
 
+        // ============================================================
+        // DELETE DISH
+        // ============================================================
         public async Task DeleteAsync(Guid id)
         {
             var dish = await _context.Dishes.FirstOrDefaultAsync(d => d.Id == id);
-            if (dish is null) throw new KeyNotFoundException("Dish not found.");
+            if (dish is null)
+                throw new KeyNotFoundException("Dish not found.");
 
             _context.Dishes.Remove(dish);
             await _context.SaveChangesAsync();

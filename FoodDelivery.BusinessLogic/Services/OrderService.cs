@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using FoodDelivery.BusinessLogic.DTOs;
+﻿using FoodDelivery.BusinessLogic.DTOs.Orders;
 using FoodDelivery.BusinessLogic.Interfaces;
 using FoodDelivery.DataAccess;
 using FoodDelivery.DataAccess.Entities;
@@ -12,125 +8,135 @@ namespace FoodDelivery.BusinessLogic.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _db;
 
-        public OrderService(ApplicationDbContext context)
+        public OrderService(ApplicationDbContext db)
         {
-            _context = context;
+            _db = db;
         }
 
-        public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request)
+        public async Task<OrderDto> CreateAsync(Guid userId, CreateOrderDto dto)
         {
-            if (request.Items == null || !request.Items.Any())
-                throw new Exception("Order must contain at least one item.");
+            if (dto.Items is null || dto.Items.Count == 0)
+                throw new ArgumentException("Order must contain at least one item.");
 
-            var dishIds = request.Items.Select(i => i.DishId).ToList();
-            var dishes = await _context.Dishes
+            // Fetch dishes in one roundtrip
+            var dishIds = dto.Items.Select(i => i.DishId).Distinct().ToArray();
+            var dishes = await _db.Dishes
                 .Where(d => dishIds.Contains(d.Id))
-                .ToListAsync();
+                .ToDictionaryAsync(d => d.Id);
 
-            if (dishes.Count != request.Items.Count)
-                throw new Exception("One or more dishes not found.");
-
+            // Validate & create items
             var order = new Order
             {
                 Id = Guid.NewGuid(),
-                UserId = request.UserId,
+                UserId = userId,
                 OrderDate = DateTime.UtcNow,
-                Status = OrderStatus.Pending,
-                Items = new List<OrderItem>()
+                Status = OrderStatus.Pending
             };
 
-            decimal total = 0;
+            decimal total = 0m;
 
-            foreach (var item in request.Items)
+            foreach (var item in dto.Items)
             {
-                var dish = dishes.First(d => d.Id == item.DishId);
+                if (!dishes.TryGetValue(item.DishId, out var dish))
+                    throw new KeyNotFoundException($"Dish not found: {item.DishId}");
+
+                if (item.Quantity < 1)
+                    throw new ArgumentException("Quantity must be >= 1");
+
                 var orderItem = new OrderItem
                 {
                     Id = Guid.NewGuid(),
+                    OrderId = order.Id,
                     DishId = dish.Id,
                     Quantity = item.Quantity,
                     UnitPrice = dish.Price
                 };
+
+                total += orderItem.UnitPrice * orderItem.Quantity;
                 order.Items.Add(orderItem);
-                total += dish.Price * item.Quantity;
             }
 
             order.TotalPrice = total;
 
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync();
 
-            return new OrderDto
-            {
-                Id = order.Id,
-                OrderDate = order.OrderDate,
-                Status = order.Status.ToString(),
-                TotalPrice = order.TotalPrice,
-                Items = order.Items.Select(i => new OrderItemDto
-                {
-                    DishId = i.DishId,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
-                }).ToList()
-            };
+            // Reload with joins for DTO mapping
+            var saved = await _db.Orders
+                .AsNoTracking()
+                .Include(o => o.Items)
+                .ThenInclude(oi => oi.Dish)
+                .FirstAsync(o => o.Id == order.Id);
+
+            return Map(saved);
         }
 
-        public async Task<IEnumerable<OrderDto>> GetOrdersByUserAsync(Guid userId)
+        public async Task<OrderDto?> GetByIdAsync(Guid userId, Guid orderId)
         {
-            var orders = await _context.Orders
+            var order = await _db.Orders
+                .AsNoTracking()
                 .Include(o => o.Items)
+                .ThenInclude(oi => oi.Dish)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
+
+            return order is null ? null : Map(order);
+        }
+
+        public async Task<(IEnumerable<OrderDto> Items, int Total)> GetMineAsync(Guid userId, int page, int pageSize)
+        {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+
+            var query = _db.Orders
+                .AsNoTracking()
                 .Where(o => o.UserId == userId)
+                .OrderByDescending(o => o.OrderDate)
+                .Include(o => o.Items)
+                .ThenInclude(oi => oi.Dish);
+
+            var total = await query.CountAsync();
+
+            var data = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return orders.Select(o => new OrderDto
-            {
-                Id = o.Id,
-                OrderDate = o.OrderDate,
-                Status = o.Status.ToString(),
-                TotalPrice = o.TotalPrice,
-                Items = o.Items.Select(i => new OrderItemDto
-                {
-                    DishId = i.DishId,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
-                }).ToList()
-            });
+            return (data.Select(Map).ToList(), total);
         }
 
-        public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
+        public async Task<OrderDto> UpdateStatusAsync(Guid orderId, UpdateOrderStatusDto dto)
         {
-            var order = await _context.Orders
+            var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+            if (order is null) throw new KeyNotFoundException("Order not found.");
+            order.Status = dto.Status;
+            await _db.SaveChangesAsync();
+
+            var saved = await _db.Orders
+                .AsNoTracking()
                 .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .ThenInclude(oi => oi.Dish)
+                .FirstAsync(o => o.Id == orderId);
 
-            if (order == null) return null;
-
-            return new OrderDto
-            {
-                Id = order.Id,
-                OrderDate = order.OrderDate,
-                Status = order.Status.ToString(),
-                TotalPrice = order.TotalPrice,
-                Items = order.Items.Select(i => new OrderItemDto
-                {
-                    DishId = i.DishId,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
-                }).ToList()
-            };
+            return Map(saved);
         }
 
-        public async Task<bool> CancelOrderAsync(Guid id)
+        private static OrderDto Map(Order o) => new()
         {
-            var order = await _context.Orders.FindAsync(id);
-            if (order == null) return false;
-            if (order.Status != OrderStatus.Pending) return false;
-
-            order.Status = OrderStatus.Cancelled;
-            await _context.SaveChangesAsync();
-            return true;
-        }
+            Id = o.Id,
+            UserId = o.UserId,
+            OrderDate = o.OrderDate,
+            TotalPrice = o.TotalPrice,
+            Status = o.Status,
+            Items = o.Items.Select(i => new OrderItemDto
+            {
+                Id = i.Id,
+                DishId = i.DishId,
+                DishName = i.Dish?.Name ?? string.Empty,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList()
+        };
     }
 }

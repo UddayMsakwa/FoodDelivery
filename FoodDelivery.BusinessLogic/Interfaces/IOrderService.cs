@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using FoodDelivery.BusinessLogic.DTOs;
+﻿using FoodDelivery.BusinessLogic.DTOs.Orders;
 
 namespace FoodDelivery.BusinessLogic.Interfaces
 {
     public interface IOrderService
     {
-        Task<OrderDto> CreateOrderAsync(CreateOrderRequest request);
-        Task<IEnumerable<OrderDto>> GetOrdersByUserAsync(Guid userId);
-        Task<OrderDto?> GetOrderByIdAsync(Guid id);
-        Task<bool> CancelOrderAsync(Guid id);
+        Task<OrderDto> CreateAsync(Guid userId, CreateOrderDto dto);
+        Task<OrderDto?> GetByIdAsync(Guid userId, Guid orderId);
+        Task<(IEnumerable<OrderDto> Items, int Total)> GetMineAsync(Guid userId, int page, int pageSize);
+        Task<OrderDto> UpdateStatusAsync(Guid orderId, UpdateOrderStatusDto dto); // optional (admin)
     }
 }
